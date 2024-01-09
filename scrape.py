@@ -236,6 +236,10 @@ def scrape_data():
                 'report_pdf_link': report_pdf_link
             })
 
+    data.sort(
+        key=lambda x: (x.get('death_datetime_utc'), x.get('name'))
+    )
+
     with open(csv_filename, 'w') as outfile:
         writer = csv.DictWriter(outfile, fieldnames=headers)
         writer.writeheader()
