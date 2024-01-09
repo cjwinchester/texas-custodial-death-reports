@@ -111,9 +111,6 @@ def scrape_data():
 
     csv_filename = 'tx-custodial-deaths.csv'
 
-    tz_central = ZoneInfo('US/Central')
-    tz_mountain = ZoneInfo('US/Mountain')
-
     headers = [
         'county',
         'county_fips',
@@ -122,8 +119,9 @@ def scrape_data():
         'cdr_number',
         'name',
         'report_pdf_link',
-        'death_datetime',
-        'report_datetime',
+        'death_date',
+        'death_datetime_utc',
+        'report_datetime_utc',
         'version_type',
         'version_no'
     ]
@@ -155,19 +153,64 @@ def scrape_data():
                 version_no
             ) = row
 
+            county = clean_text(county.text)
+
+            fips = ''
+            if fips_lookup.get(county.upper()):
+                fips = fips_lookup.get(county.upper())
+
+            is_mountain_tz = county.upper() in ['EL PASO', 'HUDSPETH']
+
+            tz_central = ZoneInfo('US/Central')
+            tz_mountain = ZoneInfo('US/Mountain')
+            tz_utc = ZoneInfo('UTC')
+
             try:
                 death_datetime = datetime.strptime(
                     clean_text(death_datetime.text),
                     '%m/%d/%Y %H:%M %p'
-                ).isoformat()
+                )
+
+                death_date = death_datetime.date().isoformat()
+
+                if is_mountain_tz:
+                    death_datetime = death_datetime.replace(
+                        tzinfo=tz_mountain
+                    )
+                else:
+                    death_datetime = death_datetime.replace(
+                        tzinfo=tz_central
+                    )
+
+                death_datetime = death_datetime.astimezone(
+                    tz_utc
+                ).isoformat(timespec='minutes').replace(
+                    '+00:00', ''
+                )
             except ValueError:
                 death_datetime = clean_text(death_datetime.text)
+                death_date = ''
 
             try:
                 report_datetime = datetime.strptime(
                     clean_text(report_datetime.text),
                     '%m/%d/%Y %H:%M %p'
-                ).isoformat()
+                )
+
+                if is_mountain_tz:
+                    report_datetime = report_datetime.replace(
+                        tzinfo=tz_mountain
+                    )
+                else:
+                    report_datetime = report_datetime.replace(
+                        tzinfo=tz_central
+                    )
+
+                report_datetime = report_datetime.astimezone(
+                    tz_utc
+                ).isoformat(timespec='minutes').replace(
+                    '+00:00', ''
+                )
             except ValueError:
                 report_datetime = clean_text(report_datetime.text)
 
@@ -178,14 +221,6 @@ def scrape_data():
             else:
                 report_pdf_link = ''
 
-            county = clean_text(county.text)
-
-            fips = ''
-            if fips_lookup.get(county.upper()):
-                fips = fips_lookup.get(county.upper())
-
-            # .replace(tzinfo=origin_tz)
-
             data.append({
                 'agency': clean_text(agency.text),
                 'county': county,
@@ -193,8 +228,9 @@ def scrape_data():
                 'tdcj_unit': clean_text(tdcj_unit.text),
                 'cdr_number': clean_text(cdr_number.text),
                 'name': clean_text(name.text),
-                'death_datetime': death_datetime,
-                'report_datetime': report_datetime,
+                'death_date': death_date,
+                'death_datetime_utc': death_datetime,
+                'report_datetime_utc': report_datetime,
                 'version_type': clean_text(version_type.text),
                 'version_no': clean_text(version_no.text),
                 'report_pdf_link': report_pdf_link
