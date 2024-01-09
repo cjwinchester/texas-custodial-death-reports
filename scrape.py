@@ -245,5 +245,5 @@ def scrape_data():
 
 
 if __name__ == '__main__':
-    # download_pages()
+    download_pages()
     scrape_data()
