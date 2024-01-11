@@ -91,10 +91,7 @@ def get_fips_lookup():
         'Live_Oak': '48297'
     }
 
-    for fuckup in fuckups:
-        lookup[fuckup.upper()] = fuckups[fuckup]
-
-    return lookup
+    return {**lookup, **fuckups}
 
 
 def scrape_data():
